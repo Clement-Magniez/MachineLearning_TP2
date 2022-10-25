@@ -1,19 +1,16 @@
-from re import X
 import sys
-from time import time
 import torch.nn as nn
 import torch
-import numpy as np
 
-dn = 1.
 h=10
-nepochs=10
+nepochs=20
 timeframe=10
+kernel_size=3
 
 with open("2019.csv","r") as f: ls=f.readlines()
-basetrainx = torch.Tensor([float(l.split(',')[1])/dn for l in ls]).view(1,-1,1)
+basetrainx = torch.Tensor([float(l.split(',')[1]) for l in ls]).view(1,-1,1)
 with open("2020.csv","r") as f: ls=f.readlines()
-basetestx = torch.Tensor([float(l.split(',')[1])/dn for l in ls]).view(1,-1,1)
+basetestx = torch.Tensor([float(l.split(',')[1]) for l in ls]).view(1,-1,1)
 
 basetrainx_mean = torch.mean(basetrainx)
 basetestx_mean = torch.mean(basetestx)
@@ -45,23 +42,6 @@ trainloader = torch.utils.data.DataLoader(trainds, batch_size=1, shuffle=False)
 testds = torch.utils.data.TensorDataset(testx, testy)
 testloader = torch.utils.data.DataLoader(testds, batch_size=1, shuffle=False)
 crit = nn.MSELoss()
-
-class ModRnn(nn.Module):
-    def __init__(self,nhid):
-        super(ModRnn, self).__init__()
-        self.rnn = nn.RNN(1,nhid)
-        self.mlp = nn.Linear(nhid,1)
-
-    def forward(self,x):
-        # x = N, L, Hin
-        xx = x.transpose(0,1)
-        # x =  L, N, Hin
-        y,_=self.rnn(xx)
-        T,B,H = y.shape
-        y = self.mlp(y.view(T*B,H))
-        y = y.view(T,B,-1)
-        y = y.transpose(0,1)
-        return y
 
 class ModCnn(nn.Module):
     def __init__(self, nhid, kernel_size, timeframe):
@@ -112,13 +92,7 @@ def train(mod):
         print("err",totloss,testloss)
     print("fin",totloss,testloss,file=sys.stderr)
 
-"""
-modRnn=ModRnn(h)
-print("nparms",sum(p.numel() for p in modRnn.parameters() if p.requires_grad),file=sys.stderr)
-train(modRnn)
-"""
-
-modCnn=ModCnn(h, 3, 10)
+modCnn=ModCnn(h, kernel_size, timeframe)
 print("nparms",sum(p.numel() for p in modCnn.parameters() if p.requires_grad),file=sys.stderr)
 train(modCnn)
 print(testx[:1].shape)
