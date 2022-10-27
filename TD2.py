@@ -1,126 +1,39 @@
-from re import X
-import sys
-from time import time
-import torch.nn as nn
+from CNN import ModCnn
+from RNN import ModRnn
 import torch
-import numpy as np
 
-dn = 1.
-h=10
-nepochs=10
-timeframe=10
 
-with open("2019.csv","r") as f: ls=f.readlines()
-basetrainx = torch.Tensor([float(l.split(',')[1])/dn for l in ls]).view(1,-1,1)
-with open("2020.csv","r") as f: ls=f.readlines()
-basetestx = torch.Tensor([float(l.split(',')[1])/dn for l in ls]).view(1,-1,1)
+# modCnn=ModCnn(nhid=10, kernel_size=3, timeframe=10)
+# testloader, trainloader = modCnn.load_data()
+# modCnn.train_(trainloader, testloader, n_epochs=10)
+# print("Done training CNN\n\n")
 
-basetrainx_mean = torch.mean(basetrainx)
-basetestx_mean = torch.mean(basetestx)
+modRnn=ModRnn(nhid=10)
+testloader, trainloader = modRnn.load_data()
+modRnn.train_(trainloader, testloader, n_epochs=100)
+print("Done training RNN\n\n")
 
-basetrainx_std = torch.std(basetrainx)
-basetestx_std = torch.std(basetestx)
+for X,Y in testloader:
+    x, y = X, Y
 
-basetrainx = basetrainx - basetrainx_mean / torch.sqrt(basetrainx_std)
-basetestx = basetestx - basetestx_mean / torch.sqrt(basetestx_std)
+print(x.shape)
+for i in range(1,6):
+    pred = modRnn(x[:,:i*int(360/6)]) * torch.sqrt(modRnn.testx_std) + modRnn.testx_mean
+    ground_truth = y[0][i*int(360/6)-1].item() * torch.sqrt(modRnn.testx_std) + modRnn.testx_mean
+    print(f"RNN predicted {pred[0][-1].item():.1f}, ground truth was {ground_truth}")
 
-trainx, trainy, testx, testy = [], [], [], []
-for i in range(365-timeframe-1):
-    trainx.append(basetrainx[0, i:i+timeframe])
-    trainy.append(basetrainx[0, i+timeframe])
-    testx.append(basetestx[0, i:i+timeframe])
-    testy.append(basetestx[0, i+timeframe])
 
-trainx = torch.stack(trainx)
-trainy = torch.stack(trainy)
-testx = torch.stack(testx)
-testy = torch.stack(testy)
 
-print(trainx.shape, trainy.shape, testx.shape, testy.shape)
 
-print(basetrainx_mean, basetestx_mean, basetrainx_std, basetestx_std)
 
-trainds = torch.utils.data.TensorDataset(trainx, trainy)
-trainloader = torch.utils.data.DataLoader(trainds, batch_size=1, shuffle=False)
-testds = torch.utils.data.TensorDataset(testx, testy)
-testloader = torch.utils.data.DataLoader(testds, batch_size=1, shuffle=False)
-crit = nn.MSELoss()
-
-class ModRnn(nn.Module):
-    def __init__(self,nhid):
-        super(ModRnn, self).__init__()
-        self.rnn = nn.RNN(1,nhid)
-        self.mlp = nn.Linear(nhid,1)
-
-    def forward(self,x):
-        # x = N, L, Hin
-        xx = x.transpose(0,1)
-        # x =  L, N, Hin
-        y,_=self.rnn(xx)
-        T,B,H = y.shape
-        y = self.mlp(y.view(T*B,H))
-        y = y.view(T,B,-1)
-        y = y.transpose(0,1)
-        return y
-
-class ModCnn(nn.Module):
-    def __init__(self, nhid, kernel_size, timeframe):
-        self.nhid = nhid
-        self.kernel_size = kernel_size
-        self.timeframe = timeframe
-
-        super(ModCnn, self).__init__()
-        self.cnn = nn.Conv1d(1, nhid, kernel_size=kernel_size)
-        self.mlp = nn.Linear(nhid*(timeframe-kernel_size+1), 1)
-
-    def forward(self, x):
-        # x = batchsize=1, timeframe=variable, nchannels=1
-        xx = x.transpose(1, 2)
-        # xx = N, Hin, L
-        y = self.cnn(xx)
-        y = self.mlp( y.reshape(1*self.nhid*(self.timeframe-self.kernel_size+1)))
-        return y
-
-def test(mod):
-    mod.train(False)
-    totloss, nbatch = 0., 0
-    for data in testloader:
-        inputs, goldy = data
-        haty = mod(inputs)
-        loss = crit(haty,goldy)
-        totloss += loss.item()
-        nbatch += 1
-    totloss /= float(nbatch)
-    mod.train(True)
-    return totloss
-
-def train(mod):
-    optim = torch.optim.Adam(mod.parameters(), lr=0.001)
-    for epoch in range(nepochs):
-        testloss = test(mod)
-        totloss, nbatch = 0., 0
-        for data in trainloader:
-            inputs, goldy = data
-            optim.zero_grad()
-            haty = mod(inputs)
-            loss = crit(haty,goldy)
-            totloss += loss.item()
-            nbatch += 1
-            loss.backward()
-            optim.step()
-        totloss /= float(nbatch)
-        print("err",totloss,testloss)
-    print("fin",totloss,testloss,file=sys.stderr)
-
-"""
-modRnn=ModRnn(h)
-print("nparms",sum(p.numel() for p in modRnn.parameters() if p.requires_grad),file=sys.stderr)
-train(modRnn)
-"""
-
-modCnn=ModCnn(h, 3, 10)
-print("nparms",sum(p.numel() for p in modCnn.parameters() if p.requires_grad),file=sys.stderr)
-train(modCnn)
-print(testx[:1].shape)
-
-print(f"{modCnn(testx[:1]) * torch.sqrt(basetestx_std) + basetestx_mean}, {testy[:1] * torch.sqrt(basetestx_std) + basetestx_mean}")
+modCnn=ModCnn(nhid=10, kernel_size=3, timeframe=10)
+testloader, trainloader = modCnn.load_data()
+modCnn.train_(trainloader, testloader, n_epochs=10)
+print("Done training CNN\n\n")
+i = 0
+for x,y in testloader:
+    pred = modCnn(x) * torch.sqrt(modCnn.testx_std) + modCnn.testx_mean
+    ground_truth = y.item() * torch.sqrt(modCnn.testx_std) + modCnn.testx_mean
+    print(f"CNN predicted {pred.item():.1f}, ground truth was {ground_truth}")
+    i+=1
+    if i ==5: break
