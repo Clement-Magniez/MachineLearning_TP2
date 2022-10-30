@@ -39,11 +39,11 @@ class ModCnn(nn.Module):
         testx  = (testx -  self.testx_mean ) / torch.sqrt(self.testx_std)
 
         trainx_, trainy_, testx_, testy_ = [], [], [], []
-        for i in range(365-self.timeframe-1):
+        for i in range(365-self.timeframe-1-7):
             trainx_.append(trainx[0, i:i+self.timeframe])
-            trainy_.append(trainx[0, i+self.timeframe])
+            trainy_.append(trainx[0, i+self.timeframe+7])
             testx_.append(testx[0, i:i+self.timeframe])
-            testy_.append(testx[0, i+self.timeframe])
+            testy_.append(testx[0, i+self.timeframe+7])
 
         trainx = torch.stack(trainx_)
         trainy = torch.stack(trainy_)
@@ -71,10 +71,12 @@ class ModCnn(nn.Module):
         self.train(True)
         return totloss
 
-    def train_(self, trainloader, testloader,n_epochs=10):
+    def train_(self, trainloader, testloader,n_epochs=20):
         optim = torch.optim.Adam(self.parameters(), lr=0.001)
+        ttestl, ttrainl = [], []
         for epoch in range(n_epochs):
             testloss = self.test(testloader)
+            ttestl.append(testloss)
             totloss, nbatch = 0., 0
             for data in trainloader:
                 inputs, goldy = data
@@ -86,6 +88,8 @@ class ModCnn(nn.Module):
                 loss.backward()
                 optim.step()
             totloss /= float(nbatch)
-            print("err",totloss,testloss)
-        print("fin",totloss,testloss,file=sys.stderr)
+            ttrainl.append(totloss)
+            # print("err",totloss,testloss)
+        print("fin CNN",totloss,testloss,file=sys.stderr)
+        return ttestl, ttrainl
 

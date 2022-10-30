@@ -4,9 +4,12 @@ import torch
 
 
 class ModRnn(nn.Module):
-    def __init__(self,nhid):
+    def __init__(self,nhid, nhid2=None):
         super(ModRnn, self).__init__()
-        self.rnn = nn.RNN(1,nhid)
+        if nhid2 is None:
+            self.rnn = nn.RNN(input_size=1,hidden_size=nhid)
+        else :
+            self.rnn = nn.RNN(input_size=1,hidden_size=nhid, num_layers=2)
         self.mlp = nn.Linear(nhid,1)
         self.crit = nn.MSELoss()
 
@@ -20,10 +23,12 @@ class ModRnn(nn.Module):
         y = y.transpose(0,1)
         return y
 
-    def train_(self, trainloader, testloader,n_epochs=10):
-        optim = torch.optim.Adam(self.parameters(), lr=0.01)
+    def train_(self, trainloader, testloader,n_epochs=50):
+        optim = torch.optim.Adam(self.parameters(), lr=0.05)
+        ttestl, ttrainl = [], []
         for epoch in range(n_epochs):
             testloss = self.test(testloader)
+            ttestl.append(testloss)
             totloss, nbatch = 0., 0
             for data in trainloader:
                 inputs, goldy = data
@@ -35,8 +40,10 @@ class ModRnn(nn.Module):
                 loss.backward()
                 optim.step()
             totloss /= float(nbatch)
-            print("err",totloss,testloss)
-        print("fin",totloss,testloss,file=sys.stderr)
+            ttrainl.append(totloss)
+            # print("err",totloss,testloss)
+        print("fin RNN",totloss,testloss,file=sys.stderr)
+        return ttestl, ttrainl
 
     def test(self, testloader):
         self.train(False)
@@ -53,11 +60,11 @@ class ModRnn(nn.Module):
 
     def load_data(self):
         with open("2019.csv","r") as f: ls=f.readlines()
-        trainx = torch.Tensor([float(l.split(',')[1]) for l in ls[:-1]]).view(1,-1,1)
-        trainy = torch.Tensor([float(l.split(',')[1]) for l in ls[1:]]).view(1,-1,1)
+        trainx = torch.Tensor([float(l.split(',')[1]) for l in ls[:-7]]).view(1,-1,1)
+        trainy = torch.Tensor([float(l.split(',')[1]) for l in ls[7:]]).view(1,-1,1)
         with open("2020.csv","r") as f: ls=f.readlines()
-        testx = torch.Tensor([float(l.split(',')[1]) for l in ls[:-1]]).view(1,-1,1)
-        testy = torch.Tensor([float(l.split(',')[1]) for l in ls[1:]]).view(1,-1,1)
+        testx = torch.Tensor([float(l.split(',')[1]) for l in ls[:-7]]).view(1,-1,1)
+        testy = torch.Tensor([float(l.split(',')[1]) for l in ls[7:]]).view(1,-1,1)
 
         self.trainx_mean = torch.mean(trainx)
         self.testx_mean = torch.mean(testx)
@@ -68,8 +75,6 @@ class ModRnn(nn.Module):
         testx  = (testx -  self.testx_mean ) / torch.sqrt(self.testx_std)
         trainy = (trainy - self.trainx_mean) / torch.sqrt(self.trainx_std)
         testy  = (testy -  self.testx_mean ) / torch.sqrt(self.testx_std)
-        print(trainx.shape)
-        print(trainy.shape)
 
         trainds = torch.utils.data.TensorDataset(trainx, trainy)
         trainloader = torch.utils.data.DataLoader(trainds, batch_size=1, shuffle=False)
