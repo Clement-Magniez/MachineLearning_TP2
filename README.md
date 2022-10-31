@@ -1,4 +1,9 @@
-# Sujet #
+ <p style="text-align:left;">
+  <font size = "+3"> <b>TD 2</b> </font> 
+  <span style="float:right;"> 
+   <font size = "+3"> MAGNIEZ - BLUM </font> 
+  </span> 
+</p> 
 
 Dans ce TD, on essayera de prédire la température 7 jours à l'avance à l'aide d'un CNN et d'un RNN, en comparant leurs performances respectives.
 
@@ -6,19 +11,19 @@ On note qu'il y a deux façons de procéder. On peut, pour chaque modèle, l'ent
 
 # Format des données #
 
-Comme le formatage des données, dépend des hyperparamètres pour le CNN, c'est la classe CNN (et RNN pour l'homogénéité du code) qui implémente cette fonction, dans le fichier CNN.py. Pour les deux modèles, les données sont normalisées. On garde les valeurs de variance et de moyenne pour retransformer les prédictions en températures.
+Comme le formatage des données dépend des hyperparamètres pour le CNN, c'est la classe CNN (et RNN pour l'homogénéité du code) qui implémente cette fonction, dans le fichier CNN.py. Pour les deux modèles, les données sont normalisées. On garde les valeurs de variance et de moyenne pour retransformer les prédictions en températures.
 
 Pour le RNN, les données d'entrée pour prédire un certain jour J sont les températures de l'année, du premier janvier à J-7. Pour le CNN, on fixe un paramètre "time frame" qui détermine la largeur de la fenêtre temporelle prise en compte. Pour prédire J, on a donc en entrée les tempéatures de J-7-time_frame à J-7. Quelques experiences sur time_frame ont montré qu'il avait peu d'influence, il vaudra donc 8 dans le reste du TP.
 
 # Comparaison des dynamiques de convergence #
 
-Après avoir choisi à la main un learning rate et un nomre d'epochs cohérents, on fait varier différents paramètres des réseaux, en utilisant comme critère la loss sur le dataset de test (en bleu). On utilise la même loss (MSE) pour les deux modèles, de sorte à ce que leurs loss respectives soient comparables.
+Après avoir choisi à la main un learning rate et un nombre d'epochs cohérents, on fait varier différents paramètres des réseaux, en utilisant comme critère la loss sur le dataset de test (en bleu). On utilise la même loss (MSE) pour les deux modèles, de sorte à ce que leurs loss respectives soient comparables.
 
 Nombre de neurones du MLP du CNN, et kernel size:
 
 ![plot](./CNN.png)
 
-On ne constate pas de différences significatives. La convergence est stable et régulière d'un run à l'autre, la loss converge vers 2.75 dans touts les cas. Les performances sont légèrement meilleures sur le dataset d'entrainement, rien de notable.
+On ne constate pas de différences significatives. La convergence est stable et régulière d'un run à l'autre, la loss converge vers 2.75 dans tous les cas. Les performances sont légèrement meilleures sur le dataset d'entrainement, rien de notable.
 
 Nombre de neurones de l'unique couche du RNN, sur deux runs différents:
 
@@ -32,9 +37,8 @@ Avec deux couches cachées, de même taille:
 
 ![plot](./RNN_2_layers.png)
 
-Dans ce cas, augmenter le nombre de paramètres n'est pas bénéfiques aux performances: l'entrainement est trop instable, peut-etre à cause du bruit important dans les données. On obtient pour 2x10 neurones un résultat comparable à 1x20 et 1x30 en terme de meilleure loss sur le dataset de test, mais un meilleur comportement général. Pour 20 et 30, les résultats ne sont pas probants.
+Dans ce cas, augmenter le nombre de paramètres n'est pas bénéfiques aux performances: l'entrainement est trop instable, peut-être à cause du bruit important dans les données. On obtient pour 2x10 neurones un résultat comparable à 1x20 et 1x30 en terme de meilleure loss sur le dataset de test, mais un meilleur comportement général. Pour 20 et 30, les résultats ne sont pas probants.
 
 # Résultats finaux #
 
-RNN 2x10 top tier.
-
+Pour conclure, s'il fallait dégager le modèle le plus efficace parmi ceux de nos tests cela serait le RNN avec 2 couches cachées de taille 10 qui présente la meilleure loss ainsi qu'une bonne stabilité dans l'entrainement.
